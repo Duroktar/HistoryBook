@@ -131,7 +131,6 @@ if [ -n "$SHELL_RC_FILE" ]; then
            --yesno "To ensure 'history_book' always reads your latest commands, it's recommended to configure your ${CONFIG_DESCRIPTION} to save history instantly.\n\nThis will append the necessary lines to ${SHELL_RC_FILE}.\n\nDo you want to apply this configuration now?" 15 70
 
     RESPONSE=$? # Get the exit status of dialog (0 for Yes, 1 for No, 255 for ESC)
-    clear # Clears the screen after dialog completes
 
     case $RESPONSE in
         0) # Yes

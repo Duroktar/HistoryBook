@@ -51,9 +51,6 @@ if [[ ! $REPLY =~ ^[Yy]$ ]]; then
     exit 0
 fi
 
-# Clear screen after confirmation
-clear
-
 # 2. Remove Symbolic Link
 info "Step 1: Removing symbolic link..."
 SYMLINK_FULL_PATH="${SYMLINK_DIR}/${SYMLINK_NAME}"

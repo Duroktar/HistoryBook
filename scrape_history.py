@@ -119,13 +119,11 @@ def main():
 
     if not file_path:
         d.msgbox("Could not find a supported history file (.zsh_history, .bash_history) in your home directory.")
-        os.system('clear') # Clear screen after msgbox
         return
 
     commands = parse_history(file_path, shell_type)
     if not commands:
         d.msgbox("No commands found or unable to parse history file.")
-        os.system('clear') # Clear screen after msgbox
         return
 
     # Load commands that have already been saved to avoid showing them.
@@ -136,7 +134,6 @@ def main():
 
     if not filtered_commands:
         d.msgbox(f"No new commands found in your recent history. All recent commands are already in {OUTPUT_FILENAME}.")
-        os.system('clear') # Clear screen after msgbox
         return
 
     # Reverse the filtered_commands list to display newest first in the TUI
@@ -152,8 +149,6 @@ def main():
         height=30,
         width=100
     )
-
-    os.system('clear') # Clear the screen immediately after the dialog box closes
 
     if code == d.OK:
         if selected_commands:
