@@ -32,7 +32,7 @@ error() {
 # --- Configuration ---
 PROJECT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 VENV_DIR="${PROJECT_DIR}/venv"
-MAIN_SCRIPT_NAME="scrape_history.py"
+MAIN_SCRIPT_NAME="history_book.py" # Updated to history_book.py
 REQUIREMENTS_FILE="${PROJECT_DIR}/requirements.txt"
 SYMLINK_DIR="${HOME}/.local/bin"
 SYMLINK_NAME="history_book"
@@ -46,8 +46,9 @@ if ! command -v python3 &> /dev/null; then
     error "Python 3 is not installed. Please install it to continue."
 fi
 
-if ! command -v dialog &> /dev/null; then
-    error "'dialog' is not installed. Please install it using your system's package manager (e.g., 'sudo apt install dialog' or 'brew install dialog')."
+# Changed dialog to whiptail
+if ! command -v whiptail &> /dev/null; then
+    error "'whiptail' is not installed. Please install it using your system's package manager (e.g., 'sudo apt install whiptail' or 'brew install whiptail')."
 fi
 success "All system dependencies are present."
 
@@ -64,8 +65,17 @@ success "Virtual environment is ready."
 # 3. Install Python Requirements
 info "Step 3: Installing Python requirements..."
 if [ ! -f "$REQUIREMENTS_FILE" ]; then
-    error "requirements.txt not found in project directory. Please create it."
+    # Create a dummy requirements.txt if it doesn't exist, to ensure whiptail-dialogs can be installed
+    echo "whiptail-dialogs" > "$REQUIREMENTS_FILE"
+    warn "requirements.txt not found. Created a basic one including 'whiptail-dialogs'."
 fi
+
+# Ensure whiptail-dialogs is in requirements.txt
+if ! grep -q "whiptail-dialogs" "$REQUIREMENTS_FILE"; then
+    echo "whiptail-dialogs" >> "$REQUIREMENTS_FILE"
+    info "Added 'whiptail-dialogs' to requirements.txt."
+fi
+
 # Activate venv and install
 source "${VENV_DIR}/bin/activate"
 pip install -r "$REQUIREMENTS_FILE" || error "Failed to install Python packages from requirements.txt."
@@ -96,6 +106,7 @@ info "Step 5: Creating symbolic link for 'history_book' command..."
 mkdir -p "$SYMLINK_DIR" # Create the directory if it doesn't exist
 ln -sf "$LAUNCHER_SCRIPT_PATH" "${SYMLINK_DIR}/${SYMLINK_NAME}" || error "Failed to create symbolic link."
 success "Symbolic link created at ${SYMLINK_DIR}/${SYMLINK_NAME}"
+
 # --- New Step: Configure Shell History ---
 info "Step 6: Configuring shell history (optional)..."
 
@@ -125,12 +136,13 @@ setopt SHARE_HISTORY'
 esac
 
 if [ -n "$SHELL_RC_FILE" ]; then
-    # Use dialog to ask for user confirmation
-    dialog --backtitle "History Book Installation" \
-           --title "Shell History Configuration" \
-           --yesno "To ensure 'history_book' always reads your latest commands, it's recommended to configure your ${CONFIG_DESCRIPTION} to save history instantly.\n\nThis will append the necessary lines to ${SHELL_RC_FILE}.\n\nDo you want to apply this configuration now?" 15 70
+    # Use whiptail to ask for user confirmation
+    # whiptail --yesno "text" height width
+    whiptail --backtitle "History Book Installation" \
+             --title "Shell History Configuration" \
+             --yesno "To ensure 'history_book' always reads your latest commands, it's recommended to configure your ${CONFIG_DESCRIPTION} to save history instantly.\n\nThis will append the necessary lines to ${SHELL_RC_FILE}.\n\nDo you want to apply this configuration now?" 15 70 3>&1 1>&2 2>&3
 
-    RESPONSE=$? # Get the exit status of dialog (0 for Yes, 1 for No, 255 for ESC)
+    RESPONSE=$? # Get the exit status of whiptail (0 for Yes, 1 for No)
 
     case $RESPONSE in
         0) # Yes
@@ -148,8 +160,8 @@ if [ -n "$SHELL_RC_FILE" ]; then
             info "Skipping automatic shell history configuration."
             info "You can manually configure your shell later by adding the provided lines to your ${CONFIG_DESCRIPTION}."
             ;;
-        255) # ESC (User pressed cancel)
-            warn "Shell history configuration cancelled."
+        *) # Any other exit code (e.g., ESC)
+            warn "Shell history configuration cancelled or unexpected response."
             info "You can manually configure your shell later by adding the provided lines to your ${CONFIG_DESCRIPTION}."
             ;;
     esac

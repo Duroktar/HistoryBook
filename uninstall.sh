@@ -33,8 +33,6 @@ error() {
 # --- Configuration (Must match install.sh) ---
 PROJECT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 VENV_DIR="${PROJECT_DIR}/venv"
-MAIN_SCRIPT_NAME="scrape_history.py" # Not directly used for uninstall, but good to keep consistent
-REQUIREMENTS_FILE="${PROJECT_DIR}/requirements.txt" # Not directly used for uninstall
 SYMLINK_DIR="${HOME}/.local/bin"
 SYMLINK_NAME="history_book"
 LAUNCHER_SCRIPT_PATH="${PROJECT_DIR}/${SYMLINK_NAME}_launcher.sh"
@@ -86,17 +84,57 @@ info "Step 4: Reverting shell history configuration (optional)..."
 
 CURRENT_SHELL=$(basename "$SHELL")
 SHELL_RC_FILE=""
+# Define the exact lines added by the installer
 CONFIG_LINES_BASH='export PROMPT_COMMAND="history -a; ${PROMPT_COMMAND:-}"'
 CONFIG_LINES_ZSH_1='setopt INC_APPEND_HISTORY'
 CONFIG_LINES_ZSH_2='setopt SHARE_HISTORY'
 CONFIG_COMMENT='# Added by History Book installer for instant history saving'
 
+# Helper function to remove a specific line if it exists
+remove_line_if_exists() {
+    local file="$1"
+    local pattern="$2"
+    local description="$3"
+
+    if [ -f "$file" ]; then
+        if grep -qF -- "$pattern" "$file"; then
+            # Get the line number of the first occurrence of the fixed string
+            local line_num=$(grep -nF "$pattern" "$file" | head -n 1 | cut -d ':' -f 1)
+            if [ -n "$line_num" ]; then
+                sed -i "${line_num}d" "$file"
+                success "Removed '${description}' from ${file}."
+                return 0 # Success
+            else
+                warn "Could not determine line number for '${description}' in ${file}. Skipping."
+            fi
+        else
+            info "'${description}' not found in ${file}. Skipping removal."
+        fi
+    else
+        info "Configuration file '${file}' not found. Skipping removal of '${description}'."
+    fi
+    return 1 # Failure or not found
+}
+
 case "$CURRENT_SHELL" in
     "bash")
         SHELL_RC_FILE="${HOME}/.bashrc"
+        if remove_line_if_exists "$SHELL_RC_FILE" "$CONFIG_LINES_BASH" "Bash history configuration"; then
+            remove_line_if_exists "$SHELL_RC_FILE" "$CONFIG_COMMENT" "History Book comment"
+        fi
         ;;
     "zsh")
         SHELL_RC_FILE="${HOME}/.zshrc"
+        if remove_line_if_exists "$SHELL_RC_FILE" "$CONFIG_LINES_ZSH_1" "Zsh history config line 1"; then
+            : # Successfully removed, continue
+        fi
+        if remove_line_if_exists "$SHELL_RC_FILE" "$CONFIG_LINES_ZSH_2" "Zsh history config line 2"; then
+            : # Successfully removed, continue
+        fi
+        # Remove the comment only if both Zsh lines were removed or never existed (clean up)
+        if ! grep -qF -- "$CONFIG_LINES_ZSH_1" "$SHELL_RC_FILE" && ! grep -qF -- "$CONFIG_LINES_ZSH_2" "$SHELL_RC_FILE"; then
+            remove_line_if_exists "$SHELL_RC_FILE" "$CONFIG_COMMENT" "History Book comment"
+        fi
         ;;
     *)
         warn "Unsupported shell: ${CURRENT_SHELL}. Automatic history configuration rollback is not available."
@@ -105,39 +143,9 @@ case "$CURRENT_SHELL" in
 esac
 
 if [ -n "$SHELL_RC_FILE" ] && [ -f "$SHELL_RC_FILE" ]; then
-    info "Checking ${SHELL_RC_FILE} for History Book configuration..."
-    
-    # Remove Bash specific lines
-    if [[ "$CURRENT_SHELL" == "bash" ]] && grep -qF -- "$CONFIG_LINES_BASH" "$SHELL_RC_FILE"; then
-        sed -i "\_$(echo "$CONFIG_LINES_BASH" | sed 's/[\/&]/\\&/g')_d" "$SHELL_RC_FILE"
-        success "Removed Bash history configuration from ${SHELL_RC_FILE}."
-    fi
-
-    # Remove Zsh specific lines
-    if [[ "$CURRENT_SHELL" == "zsh" ]]; then
-        if grep -qF -- "$CONFIG_LINES_ZSH_1" "$SHELL_RC_FILE"; then
-            sed -i "\_$(echo "$CONFIG_LINES_ZSH_1" | sed 's/[\/&]/\\&/g')_d" "$SHELL_RC_FILE"
-            success "Removed Zsh history config line 1 from ${SHELL_RC_FILE}."
-        fi
-        if grep -qF -- "$CONFIG_LINES_ZSH_2" "$SHELL_RC_FILE"; then
-            sed -i "\_$(echo "$CONFIG_LINES_ZSH_2" | sed 's/[\/&]/\\&/g')_d" "$SHELL_RC_FILE"
-            success "Removed Zsh history config line 2 from ${SHELL_RC_FILE}."
-        fi
-    fi
-
-    # Remove the installer comment line
-    if grep -qF -- "$CONFIG_COMMENT" "$SHELL_RC_FILE"; then
-        sed -i "\_$(echo "$CONFIG_COMMENT" | sed 's/[\/&]/\\&/g')_d" "$SHELL_RC_FILE"
-        success "Removed History Book comment from ${SHELL_RC_FILE}."
-    fi
-
-    if [[ "$?" -eq 0 ]]; then # Check status of last sed command
-        warn "Please remember to restart your terminal or run 'source ${SHELL_RC_FILE}' for changes to take effect."
-    else
-        error "Failed to modify ${SHELL_RC_FILE}. Please check permissions or remove lines manually."
-    fi
+    warn "Please remember to restart your terminal or run 'source ${SHELL_RC_FILE}' for changes to take effect."
 else
-    info "Shell configuration file '${SHELL_RC_FILE}' not found or not applicable. Skipping."
+    info "Automatic shell configuration rollback skipped due to unsupported shell or missing file."
 fi
 success "Shell history configuration rollback complete."
 
