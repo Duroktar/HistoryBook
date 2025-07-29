@@ -78,7 +78,7 @@ def load_commands_data(filename):
     try:
         with open(filename, 'r') as f:
             data = json.load(f)
-        # Ensure 'tags' and 'last_run' exist for older entries
+        # Ensure 'tags', 'description', 'last_run', and 'quiet' exist for older entries
         for item in data:
             if 'tags' not in item:
                 item['tags'] = []
@@ -86,6 +86,10 @@ def load_commands_data(filename):
                 item['description'] = ""
             if 'last_run' not in item:
                 item['last_run'] = None
+            # --- NEW: Ensure 'quiet' field exists with a default ---
+            if 'quiet' not in item:
+                item['quiet'] = False
+            # --- END NEW ---
         # Create a set of command strings for quick lookups.
         existing_command_set = {item['command'] for item in data}
         print(f"✅ Loaded {len(data)} existing commands from {filename}")
@@ -99,7 +103,7 @@ def save_commands_data(filename, data):
     try:
         with open(filename, 'w') as f:
             json.dump(data, f, indent=2)
-        print(f"\n✅ Successfully saved/updated commands to {filename}")
+        print(f"✅ Successfully saved/updated commands to {filename}")
     except IOError as e:
         print(f"\n❌ Error saving to {filename}: {e}")
 
@@ -151,7 +155,8 @@ def scrape_commands(w: Whiptail):
                     "command": command_text, # This will now be the correctly retrieved full command
                     "description": "",
                     "tags": [],
-                    "last_run": None
+                    "last_run": None,
+                    "quiet": False # Default quiet to False for new entries
                 }
                 new_entries.append(entry)
             
@@ -191,7 +196,7 @@ def edit_commands(w: Whiptail):
         # Edit Description
         new_description, code_desc = w.inputbox(
             f"Edit description for: {selected_command_entry['command']}",
-            default=selected_command_entry.get('description', '') # Corrected to default
+            default=selected_command_entry.get('description', '')
         )
 
         if code_desc == 0: # 0 indicates OK/Yes in whiptail
@@ -201,11 +206,30 @@ def edit_commands(w: Whiptail):
             current_tags_str = ", ".join(selected_command_entry.get('tags', []))
             new_tags_str, code_tags = w.inputbox(
                 f"Edit tags for: {selected_command_entry['command']} (comma-separated)",
-                default=current_tags_str # Corrected to default
+                default=current_tags_str
             )
 
             if code_tags == 0: # 0 indicates OK/Yes in whiptail
                 selected_command_entry['tags'] = [tag.strip() for tag in new_tags_str.split(',') if tag.strip()]
+                
+                # --- MODIFICATION START ---
+                # Corrected yesno logic and added more descriptive text
+                quiet_status = "ON" if selected_command_entry.get('quiet', False) else "OFF"
+                prompt_text = (
+                    f"Set command '{selected_command_entry['command']}' to run quietly by default?\n\n"
+                    f"Current status: {quiet_status}\n\n"
+                    "Select 'Yes' to suppress this script's output (e.g., 'Running:' messages) when this command is executed via 'history_book run'.\n"
+                    "Select 'No' to show all output."
+                )
+                # whiptail.yesno returns True for Yes, False for No
+                code_quiet = w.yesno(prompt_text) 
+                
+                if code_quiet: # True means Yes was selected
+                    selected_command_entry['quiet'] = True
+                else: # False means No was selected (or ESC/Cancel, which defaults to False)
+                    selected_command_entry['quiet'] = False
+                # --- MODIFICATION END ---
+
                 save_commands_data(OUTPUT_FILENAME, commands_data)
             else:
                 print("\nTag editing cancelled. Description saved (if changed).")
@@ -215,7 +239,7 @@ def edit_commands(w: Whiptail):
         print("\nCommand selection cancelled.")
 
 # --- RUN COMMANDS ---
-def run_commands(w: Whiptail):
+def run_commands(w: Whiptail, quiet_flag: bool = False): # Added quiet_flag parameter
     """Function to select and run commands from the project_commands.json."""
     commands_data, _ = load_commands_data(OUTPUT_FILENAME)
 
@@ -223,10 +247,11 @@ def run_commands(w: Whiptail):
         w.msgbox(f"No commands found in {OUTPUT_FILENAME} to run.")
         return
 
-    # --- MODIFICATION START ---
     # Create a dictionary to map a unique tag (index) back to the full command string
     # This is crucial to prevent whiptail from splitting tags that contain spaces.
     command_map = {str(i): item['command'] for i, item in enumerate(commands_data)}
+    # Also map index to the full item object for easy access to 'quiet' setting
+    item_map = {str(i): item for i, item in enumerate(commands_data)}
 
     # Prepare choices for checklist: (tag, item, status) for whiptail
     # Tag is now the string representation of the index, item is the full command string for display.
@@ -237,55 +262,120 @@ def run_commands(w: Whiptail):
             display_text += f" ({item['description']})"
         if item.get('tags'):
             display_text += f" [{', '.join(item['tags'])}]"
+        # Indicate if command is set to quiet by default
+        if item.get('quiet', False):
+            display_text += " (Quiet by default)"
         # Use the numerical index as the tag
         choices.append((str(i), display_text, 'OFF')) 
 
-    selected_tags, exit_code = w.checklist( # selected_tags will now be a list of string indices (e.g., ['0', '1'])
+    selected_tags, exit_code = w.checklist(
         "Use SPACE to select commands to run. Press ENTER to execute.",
         choices
     )
 
     if exit_code == 0 and selected_tags: # 0 indicates OK/Yes in whiptail
-        print("\nExecuting selected commands:")
+        # print("\nExecuting selected commands:")
+        print('')
         for tag in selected_tags: # Iterate over the selected tags (indices)
             # Retrieve the full, correct command string using the map
             original_command = command_map[tag] 
+            selected_item = item_map[tag] # Get the full item object
+
+            # --- NEW: Determine effective quiet mode for this command ---
+            effective_quiet = quiet_flag or selected_item.get('quiet', False)
+            # --- END NEW ---
             
-            print(f"\n🚀 Running: {original_command}")
+            if not effective_quiet:
+                print(f"🚀 Running: {original_command}\n")
             try:
                 # Execute the command in the shell
                 subprocess.run(original_command, shell=True, check=True)
+                print()
                 # Update last_run timestamp
                 for item in commands_data:
                     if item['command'] == original_command:
                         item['last_run'] = datetime.datetime.now().isoformat()
                         break
-                print(f"✅ Command completed: {original_command}")
+                if not effective_quiet:
+                    print(f"✅ Command completed: {original_command}\n")
             except subprocess.CalledProcessError as e:
+                # Always print error messages, even in quiet mode, for user awareness
                 print(f"❌ Command failed with exit code {e.returncode}: {original_command}")
             except Exception as e:
+                # Always print error messages
                 print(f"❌ An error occurred while running '{original_command}': {e}")
         
         save_commands_data(OUTPUT_FILENAME, commands_data)
-        print("\nExecution complete.")
+        if not quiet_flag: # Only print overall completion if not globally quiet
+            print("\nExecution complete.")
     else:
         print("\nNo commands selected for execution or operation cancelled.")
-    # --- MODIFICATION END ---
 
+# --- NEW FUNCTIONALITY: LIST COMMANDS ---
+def list_commands(w: Whiptail):
+    """Function to print available commands to stdout."""
+    commands_data, _ = load_commands_data(OUTPUT_FILENAME)
+
+    if not commands_data:
+        w.msgbox(f"No commands found in {OUTPUT_FILENAME} to list.")
+        return
+
+    print("\n\t--- History Book Commands ---\n")
+    for item in commands_data:
+        # Corrected: command_line is the raw command, output_line builds the metadata string
+        command_line = item['command'] 
+        output_line_parts = []
+
+        if item.get('description'):
+            output_line_parts.append(f"({item['description']})")
+        if item.get('tags'):
+            output_line_parts.append(f"[{', '.join(item['tags'])}]")
+        if item.get('quiet', False): # Indicate if quiet by default
+            output_line_parts.append("(Quiet)")
+        
+        # Print the raw command
+        print('$', command_line)
+        # Print the metadata line, indented, only if there's metadata
+        if output_line_parts:
+            print('\t' + ' '.join(output_line_parts))
+        print()
+    print("-----------------------------\n")
 
 # --- Main Dispatcher ---
 def main():
     w = Whiptail(title="History Book", backtitle="Project Command Collector")
 
-    # If no arguments, or 'scrape' (default action)
-    if len(sys.argv) == 1 or sys.argv[1] == "scrape":
+    # Parse command and flags
+    command = "scrape" # Default command
+    quiet_flag = False
+    args = sys.argv[1:] # Get arguments after script name
+
+    if args:
+        if args[0].startswith('--'): # If first arg is a flag, it's for the default command
+            if '--quiet' in args:
+                quiet_flag = True
+                args.remove('--quiet')
+            if args: # If there are still args, the first one is the command
+                command = args[0]
+                args = args[1:] # Remove command from args
+        else: # First arg is a command
+            command = args[0]
+            args = args[1:] # Remove command from args
+            if '--quiet' in args: # Check for quiet flag after the command
+                quiet_flag = True
+                args.remove('--quiet')
+
+    # Dispatch based on command
+    if command == "scrape":
         scrape_commands(w)
-    elif sys.argv[1] == "edit":
+    elif command == "edit":
         edit_commands(w)
-    elif sys.argv[1] == "run":
-        run_commands(w)
+    elif command == "run":
+        run_commands(w, quiet_flag) # Pass the quiet_flag to run_commands
+    elif command == "list": # New list command
+        list_commands(w)
     else:
-        w.msgbox(f"Unknown command: '{sys.argv[1]}'\n\nUsage:\n  history_book [scrape] - Scrape new commands\n  history_book edit   - View and edit saved commands\n  history_book run    - Select and run saved commands")
+        w.msgbox(f"Unknown command: '{command}'\n\nUsage:\n  history_book [scrape] - Scrape new commands\n  history_book edit   - View and edit saved commands\n  history_book run [--quiet] - Select and run saved commands\n  history_book list   - List all saved commands")
 
 if __name__ == "__main__":
     main()
