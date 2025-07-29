@@ -96,6 +96,69 @@ info "Step 5: Creating symbolic link for 'history_book' command..."
 mkdir -p "$SYMLINK_DIR" # Create the directory if it doesn't exist
 ln -sf "$LAUNCHER_SCRIPT_PATH" "${SYMLINK_DIR}/${SYMLINK_NAME}" || error "Failed to create symbolic link."
 success "Symbolic link created at ${SYMLINK_DIR}/${SYMLINK_NAME}"
+# --- New Step: Configure Shell History ---
+info "Step 6: Configuring shell history (optional)..."
+
+# Determine the current shell
+CURRENT_SHELL=$(basename "$SHELL")
+SHELL_RC_FILE=""
+CONFIG_LINES=""
+CONFIG_DESCRIPTION=""
+
+case "$CURRENT_SHELL" in
+    "bash")
+        SHELL_RC_FILE="${HOME}/.bashrc"
+        CONFIG_LINES='export PROMPT_COMMAND="history -a; ${PROMPT_COMMAND:-}"' # Added ${PROMPT_COMMAND:-} for robustness
+        CONFIG_DESCRIPTION="Bash shell (.bashrc)"
+        ;;
+    "zsh")
+        SHELL_RC_FILE="${HOME}/.zshrc"
+        CONFIG_LINES='setopt INC_APPEND_HISTORY
+setopt SHARE_HISTORY'
+        CONFIG_DESCRIPTION="Zsh shell (.zshrc)"
+        ;;
+    *)
+        warn "Unsupported shell: ${CURRENT_SHELL}. Automatic history configuration is not available."
+        info "Please refer to the installation guide for manual shell configuration."
+        SHELL_RC_FILE="" # Clear file if unsupported
+        ;;
+esac
+
+if [ -n "$SHELL_RC_FILE" ]; then
+    # Use dialog to ask for user confirmation
+    dialog --backtitle "History Book Installation" \
+           --title "Shell History Configuration" \
+           --yesno "To ensure 'history_book' always reads your latest commands, it's recommended to configure your ${CONFIG_DESCRIPTION} to save history instantly.\n\nThis will append the necessary lines to ${SHELL_RC_FILE}.\n\nDo you want to apply this configuration now?" 15 70
+
+    RESPONSE=$? # Get the exit status of dialog (0 for Yes, 1 for No, 255 for ESC)
+    clear # Clears the screen after dialog completes
+
+    case $RESPONSE in
+        0) # Yes
+            if grep -qF -- "$CONFIG_LINES" "$SHELL_RC_FILE"; then
+                warn "Shell history configuration already exists in ${SHELL_RC_FILE}. Skipping."
+            else
+                info "Appending configuration to ${SHELL_RC_FILE}..."
+                echo -e "\n# Added by History Book installer for instant history saving" >> "$SHELL_RC_FILE" || error "Failed to write to ${SHELL_RC_FILE}."
+                echo "$CONFIG_LINES" >> "$SHELL_RC_FILE" || error "Failed to write to ${SHELL_RC_FILE}."
+                success "Shell history configuration applied to ${SHELL_RC_FILE}."
+                warn "Please remember to restart your terminal or run 'source ${SHELL_RC_FILE}' for changes to take effect."
+            fi
+            ;;
+        1) # No
+            info "Skipping automatic shell history configuration."
+            info "You can manually configure your shell later by adding the provided lines to your ${CONFIG_DESCRIPTION}."
+            ;;
+        255) # ESC (User pressed cancel)
+            warn "Shell history configuration cancelled."
+            info "You can manually configure your shell later by adding the provided lines to your ${CONFIG_DESCRIPTION}."
+            ;;
+    esac
+else
+    info "Automatic shell history configuration skipped due to unsupported shell."
+fi
+
+success "Shell history configuration step complete."
 
 # --- Final Instructions ---
 echo -e "\n🎉 ${COLOR_GREEN}Installation Complete!${COLOR_RESET}"
@@ -104,5 +167,3 @@ warn "If the command is not found, you may need to add '${SYMLINK_DIR}' to your 
 warn "You can do this by adding the following line to your ~/.bashrc, ~/.zshrc, or equivalent shell profile file:"
 echo -e "\n    ${COLOR_YELLOW}export PATH=\"\$HOME/.local/bin:\$PATH\"${COLOR_RESET}\n"
 echo "Then, restart your shell or run 'source ~/.bashrc' (or equivalent)."
-
-
