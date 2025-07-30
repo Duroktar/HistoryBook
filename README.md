@@ -11,6 +11,8 @@ The tool integrates with your `bash` or `zsh` history to provide a streamlined w
 * **Edit:** Modify existing command entries, including their descriptions and tags.
 * **Run:** Select and execute saved commands directly from the TUI.
 * **History Synchronization:** Optional shell configuration to ensure your history file is always up-to-date.
+* **Version Tracking:** Easily check the current version of the tool.
+* **Changelog Access:** View the project's development history directly from the CLI.
 
 ## Installation
 
@@ -50,34 +52,60 @@ The uninstaller will:
 
 Once installed, you can use the `history_book` command from anywhere in your terminal.
 
-### 1. Scrape New Commands (Default Action)
+### 1. `history_book add`
 
-This is the primary way to add new commands to your project's collection. It will display a list of recent, unique commands from your shell history that are not yet saved.
+Interactively adds new commands from your shell history to your project's collection. For each selected command, you'll be prompted for a short name, description, tags, and whether it should run quietly by default.
 
 ```bash
-history_book
-# or explicitly
-history_book scrape
+history_book add
 ```
 
-A `whiptail` checklist will appear, allowing you to select commands to save.
+### 2. `history_book list`
 
-### 2. View and Edit Saved Commands
+Prints all saved commands to your terminal, formatted for readability. You can optionally filter the list by tags.
 
-Use this command to open a menu of your currently saved commands. You can then select a command to add or modify its description and tags.
+```bash
+history_book list
+# Example with tag filtering (case-insensitive, comma-separated)
+history_book list --tags "build,docker"
+```
+
+### 3. `history_book run <name>`
+
+Executes a saved command by its short name.
+
+```bash
+history_book run my_command_name
+```
+
+You can also suppress History Book's own output (e.g., "Running:" messages) for a specific execution using the `--quiet` flag:
+
+```bash
+history_book run my_command_name --quiet
+```
+
+Commands can also be configured to run quietly by default using the `edit` command.
+
+### 4. `history_book edit`
+
+Interactively edit properties (name, description, tags, quiet status) of an existing saved command.
 
 ```bash
 history_book edit
 ```
 
-A `whiptail` menu will appear to select a command, followed by input boxes for editing.
+### 5. `history_book version`
 
-### 3. Select and Run Saved Commands
-
-This command presents a list of all your saved commands (including their descriptions and tags). You can select one or more commands to execute them directly.
+Displays the current version of the History Book tool.
 
 ```bash
-history_book run
+history_book version
 ```
 
-A `whiptail` checklist will appear, allowing you to select commands to run. The selected commands will be executed in your current shell.
+### 6. `history_book changelog`
+
+Displays the project's changelog, showing development history and updates.
+
+```bash
+history_book changelog
+	

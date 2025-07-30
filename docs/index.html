@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>History Book - Organize Your Shell Commands</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F0E6D6; /* Aged paper background color */
+        }
+        /* Custom filter for subtle noise/texture effect on background */
+        .aged-paper-bg {
+            background-color: #F0E6D6;
+            filter: url(#agedPaperTexture);
+        }
+        /* Define the SVG filter directly in CSS for clarity if not used elsewhere in SVG */
+        svg defs {
+            display: none; /* Hide defs if only used by CSS filters */
+        }
+        /* Re-add the SVG filter definitions here for the background */
+        .svg-filters {
+            position: absolute;
+            width: 0;
+            height: 0;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+    <!-- SVG Filters for Aged Paper Background -->
+    <div class="svg-filters">
+        <svg>
+            <defs>
+                <filter id="agedPaperTexture">
+                    <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="1" result="noise" />
+                    <feDiffuseLighting in="noise" lightingColor="#F0E6D6" surfaceScale="2" result="light">
+                        <feDistantLight azimuth="225" elevation="45" />
+                    </feDiffuseLighting>
+                    <feBlend in="SourceGraphic" in2="light" mode="multiply" />
+                </filter>
+            </defs>
+        </svg>
+    </div>
+
+    <div class="min-h-screen flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8 aged-paper-bg">
+        <div class="max-w-4xl w-full bg-white shadow-xl rounded-lg p-8 sm:p-10 lg:p-12">
+            <!-- Logo Section -->
+            <div class="flex flex-col sm:flex-row items-center justify-center mb-10">
+                <!-- Embedded SVG Logo -->
+                <div class="flex-shrink-0 mb-6 sm:mb-0 sm:mr-8">
+                    <svg width="600" height="200" viewBox="0 0 600 200" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <!-- Magnifying glass icon for search -->
+                            <g id="magnifyingGlass">
+                                <circle cx="0" cy="0" r="15" stroke="#333" stroke-width="3" fill="none"/>
+                                <line x1="10" y1="10" x2="25" y2="25" stroke="#333" stroke-width="3" stroke-linecap="round"/>
+                            </g>
+                        </defs>
+
+                        <!-- The Scroll -->
+                        <!-- Main scroll body -->
+                        <rect x="50" y="40" width="100" height="120" rx="10" ry="10" fill="#E0C2A0" stroke="#8B4513" stroke-width="2"/>
+
+                        <!-- Visible scroll content lines (indexing) -->
+                        <line x1="60" y1="60" x2="140" y2="60" stroke="#B09070" stroke-width="1"/>
+                        <line x1="60" y1="75" x2="140" y2="75" stroke="#B09070" stroke-width="1"/>
+                        <line x1="60" y1="90" x2="140" y2="90" stroke="#B09070" stroke-width="1"/>
+                        <line x1="60" y1="105" x2="140" y2="105" stroke="#B09070" stroke-width="1"/>
+                        <line x1="60" y1="120" x2="140" y2="120" stroke="#B09070" stroke-width="1"/>
+                        <line x1="60" y1="135" x2="140" y2="135" stroke="#B09070" stroke-width="1"/>
+
+                        <!-- "H" from History Book on the scroll - centered horizontally on the scroll -->
+                        <text x="62" y="130" font-family="Times New Roman, serif" font-size="100" font-weight="bold" fill="#4A6D3A" text-anchor="start">
+                            H
+                        </text>
+
+                        <!-- Magnifying Glass (positioned over the scroll) -->
+                        <use href="#magnifyingGlass" transform="translate(130 65) scale(0.8)"/>
+
+                        <!-- "istory Book" text to the right, moved closer -->
+                        <text x="157" y="128" font-family="Times New Roman, serif" font-size="56" font-weight="bold" fill="#4A6D3A" text-anchor="start">
+                            istory Book
+                        </text>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Product Hook Section -->
+            <section class="mb-10 text-center bg-blue-50 p-6 rounded-lg shadow-inner">
+                <p class="text-xl text-gray-800 leading-relaxed mb-4">
+                    You're deep in the zone on a new project, your terminal alive with a flurry of commands. All is well. Some time passes—a day, a week—and you return, ready to pick up where you left off. But... what was that command again? The one with the obscure flag, the long path, and the precise parameter that took longer to find in your history than it did to execute.
+                </p>
+                <p class="text-xl text-gray-800 leading-relaxed">
+                    <strong>History Book</strong> is the solution to this all-too-common problem. It acts as a curated logbook for your project's most vital commands. At the end of a session, simply run <span class="bg-gray-800 text-green-300 px-2 py-0 rounded-md inline-block"><code>history_book add</code></span>. It intelligently scrapes your recent terminal activity, allowing you to select and save the commands that matter. Enrich them with descriptions and tags for context. The next time you return to the project, your personalized command arsenal is ready and waiting, allowing you to list, review, and execute them instantly.
+                </p>
+            </section>
+
+            <hr class="my-10 border-gray-300 rounded-full">
+
+            <!-- Introduction Section (Original) -->
+            <section class="mb-10 text-center">
+                <h1 class="text-4xl font-extrabold text-gray-900 mb-4">Organize Your Shell History, Master Your Workflow</h1>
+                <p class="text-lg text-gray-700 leading-relaxed">
+                    <strong>History Book</strong> is a powerful command-line tool designed to help developers and power users effortlessly manage their frequently used shell commands for specific projects. Say goodbye to cluttered global history and endless searching – History Book keeps your essential commands organized, searchable, and ready to run.
+                </p>
+            </section>
+
+            <hr class="my-10 border-gray-300 rounded-full">
+
+            <!-- Features Section -->
+            <section class="mb-10">
+                <h2 class="text-3xl font-bold text-gray-900 mb-6 text-center">Key Features</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div class="bg-gray-50 p-6 rounded-lg shadow-sm">
+                        <h3 class="text-xl font-semibold text-gray-800 mb-3">Effortless Command Scraping</h3>
+                        <p class="text-gray-700">
+                            Pull recent commands directly from your <code>bash</code>, <code>zsh</code>, or <code>fish</code> shell history with an intuitive text-based interface. Select exactly what you need, and History Book handles the rest.
+                        </p>
+                    </div>
+                    <div class="bg-gray-50 p-6 rounded-lg shadow-sm">
+                        <h3 class="text-xl font-semibold text-gray-800 mb-3">Intelligent Organization</h3>
+                        <p class="text-gray-700">
+                            Assign <strong>short names</strong>, detailed <strong>descriptions</strong>, and <strong>comma-separated tags</strong> to your commands. This makes finding and understanding complex commands a breeze, even months later.
+                        </p>
+                    </div>
+                    <div class="bg-gray-50 p-6 rounded-lg shadow-sm">
+                        <h3 class="text-xl font-semibold text-gray-800 mb-3">Quick Execution & Control</h3>
+                        <p class="text-gray-700">
+                            Execute saved commands by their short name directly from the CLI. Control output verbosity with per-command or global quiet flags, ensuring your terminal stays clean.
+                        </p>
+                    </div>
+                    <div class="bg-gray-50 p-6 rounded-lg shadow-sm">
+                        <h3 class="text-xl font-semibold text-gray-800 mb-3">Interactive Editing</h3>
+                        <p class="text-gray-700">
+                            Modify any property of your saved commands – name, description, tags, or quiet status – through a user-friendly interactive editing interface.
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+            <hr class="my-10 border-gray-300 rounded-full">
+
+            <!-- Installation Section -->
+            <section class="mb-10">
+                <h2 class="text-3xl font-bold text-gray-900 mb-6 text-center">Get Started in Minutes</h2>
+                <p class="text-lg text-gray-700 mb-4">
+                    Installing History Book is straightforward. Just clone the repository and run the installer script:
+                </p>
+                <div class="bg-gray-900 text-green-400 p-4 rounded-lg shadow-md mb-6 overflow-x-auto">
+                    <pre><code class="language-bash">git clone https://github.com/your-username/history-book.git
+cd history-book
+./install.sh</code></pre>
+                </div>
+                <p class="text-sm text-gray-600">
+                    The installer will set up a virtual environment, install dependencies, and create a `history_book` launcher in `~/.local/bin`. You may need to add `~/.local/bin` to your `PATH` if it's not already configured.
+                </p>
+            </section>
+
+            <hr class="my-10 border-gray-300 rounded-full">
+
+            <!-- Usage Examples Section -->
+            <section class="mb-10">
+                <h2 class="text-3xl font-bold text-gray-900 mb-6 text-center">Simple Usage</h2>
+                <div class="space-y-6">
+                    <div>
+                        <h3 class="text-xl font-semibold text-gray-800 mb-2">Add Commands:</h3>
+                        <div class="bg-gray-900 text-green-400 p-3 rounded-lg shadow-sm overflow-x-auto">
+                            <pre><code class="language-bash">history_book add</code></pre>
+                        </div>
+                        <p class="text-sm text-gray-600 mt-1">Interactively select and save commands from your shell history.</p>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-semibold text-gray-800 mb-2">List Commands:</h3>
+                        <div class="bg-gray-900 text-green-400 p-3 rounded-lg shadow-sm overflow-x-auto">
+                            <pre><code class="language-bash">history_book list
+history_book list --tags "build,docker"</code></pre>
+                        </div>
+                        <p class="text-sm text-gray-600 mt-1">View all saved commands or filter by tags.</p>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-semibold text-gray-800 mb-2">Run Commands:</h3>
+                        <div class="bg-gray-900 text-green-400 p-3 rounded-lg shadow-sm overflow-x-auto">
+                            <pre><code class="language-bash">history_book run my_dev_setup
+history_book run deploy_prod --quiet</code></pre>
+                        </div>
+                        <p class="text-sm text-gray-600 mt-1">Execute a command by its short name, with optional quiet mode.</p>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-semibold text-gray-800 mb-2">Edit Commands:</h3>
+                        <div class="bg-gray-900 text-green-400 p-3 rounded-lg shadow-sm overflow-x-auto">
+                            <pre><code class="language-bash">history_book edit</code></pre>
+                        </div>
+                        <p class="text-sm text-gray-600 mt-1">Interactively modify details of your saved commands.</p>
+                    </div>
+                </div>
+            </section>
+
+            <hr class="my-10 border-gray-300 rounded-full">
+
+            <!-- Support Blurb -->
+            <section class="text-center mb-8 text-gray-700">
+                <div class="mb-2">If you find <strong>History Book</strong> helpful, consider supporting its development! Your contributions help keep the project healthy and growing.</div>
+                <div class="mb-2">You can support me through Ko-fi: <a href="https://ko-fi.com/duroktar" target="_blank" class="text-blue-600 hover:text-blue-800 underline">https://ko-fi.com/duroktar</a></div>
+                <div>Check out the GitHub repository: <a href="https://github.com/Duroktar/HistoryBook" target="_blank" class="text-blue-600 hover:text-blue-800 underline">https://github.com/Duroktar/HistoryBook</a></div>
+            </section>
+
+            <!-- Footer -->
+            <footer class="bg-gray-900 text-gray-300 py-6 px-4 text-center rounded-b-lg -mx-8 -mb-8">
+                <div class="copyright-line mb-2">
+                    <span>&copy; Scott Doucet (@Duroktar) 2025. All rights reserved.</span>
+                </div>
+                <p class="mt-2 text-sm">Built with passion for a cleaner command line.</p>
+            </footer>
+        </div>
+    </div>
+</body>
+</html>
+

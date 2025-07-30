@@ -1,0 +1,47 @@
+<svg width="600" height="200" viewBox="0 0 600 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Filter for subtle noise/texture effect for aged paper -->
+    <filter id="agedPaperTexture">
+      <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="1" result="noise" />
+      <feDiffuseLighting in="noise" lightingColor="#F0E6D6" surfaceScale="2" result="light">
+        <feDistantLight azimuth="225" elevation="45" />
+      </feDiffuseLighting>
+      <feBlend in="SourceGraphic" in2="light" mode="multiply" />
+    </filter>
+
+    <!-- Magnifying glass icon for search -->
+    <g id="magnifyingGlass">
+      <circle cx="0" cy="0" r="15" stroke="#333" stroke-width="3" fill="none"/>
+      <line x1="10" y1="10" x2="25" y2="25" stroke="#333" stroke-width="3" stroke-linecap="round"/>
+    </g>
+  </defs>
+
+  <!-- Background for aged paper texture -->
+  <rect x="0" y="0" width="850" height="200" fill="#F0E6D6" filter="url(#agedPaperTexture)" />
+
+  <!-- The Scroll -->
+  <!-- Main scroll body -->
+  <rect x="50" y="40" width="100" height="120" rx="10" ry="10" fill="#E0C2A0" stroke="#8B4513" stroke-width="2"/>
+
+  <!-- Visible scroll content lines (indexing) - these might be partially covered by the large H -->
+  <line x1="60" y1="60" x2="140" y2="60" stroke="#B09070" stroke-width="1"/>
+  <line x1="60" y1="75" x2="140" y2="75" stroke="#B09070" stroke-width="1"/>
+  <line x1="60" y1="90" x2="140" y2="90" stroke="#B09070" stroke-width="1"/>
+  <line x1="60" y1="105" x2="140" y2="105" stroke="#B09070" stroke-width="1"/>
+  <line x1="60" y1="120" x2="140" y2="120" stroke="#B09070" stroke-width="1"/>
+  <line x1="60" y1="135" x2="140" y2="135" stroke="#B09070" stroke-width="1"/>
+
+  <!-- "H" from History Book on the scroll - centered horizontally on the scroll -->
+  <text x="62" y="130" font-family="Times New Roman, serif" font-size="100" font-weight="bold" fill="#4A6D3A" text-anchor="start">
+    H
+  </text>
+
+  <!-- Magnifying Glass (positioned over the scroll) -->
+  <use href="#magnifyingGlass" transform="translate(130 65) scale(0.8)"/>
+
+  <!-- "istory Book" text to the right, moved closer -->
+  <text x="157" y="128" font-family="Times New Roman, serif" font-size="56" font-weight="bold" fill="#4A6D3A" text-anchor="start">
+    istory Book
+  </text>
+</svg>
+

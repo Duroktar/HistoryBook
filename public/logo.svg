@@ -1,0 +1,44 @@
+<svg width="800" height="200" viewBox="0 0 800 200" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Filter for subtle noise/texture effect for aged paper -->
+    <filter id="agedPaperTexture">
+      <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="1" result="noise" />
+      <feDiffuseLighting in="noise" lightingColor="#F0E6D6" surfaceScale="2" result="light">
+        <feDistantLight azimuth="225" elevation="45" />
+      </feDiffuseLighting>
+      <feBlend in="SourceGraphic" in2="light" mode="multiply" />
+    </filter>
+  </defs>
+
+  <!-- Background for aged paper texture -->
+  <rect x="0" y="0" width="800" height="200" fill="#F0E6D6" filter="url(#agedPaperTexture)" />
+
+  <!-- Main book shape (phone book style) -->
+  <rect x="20" y="40" width="160" height="120" rx="15" ry="15" fill="#F5F5DC" stroke="#333" stroke-width="3"/>
+
+  <!-- Book spine -->
+  <rect x="18" y="40" width="10" height="120" rx="5" ry="5" fill="#8B4513" stroke="#333" stroke-width="2"/>
+
+  <!-- Pages - subtle lines -->
+  <line x1="30" y1="50" x2="170" y2="50" stroke="#DDD" stroke-width="1"/>
+  <line x1="30" y1="60" x2="170" y2="60" stroke="#DDD" stroke-width="1"/>
+  <line x1="30" y1="70" x2="170" y2="70" stroke="#DDD" stroke-width="1"/>
+  <line x1="30" y1="80" x2="170" y2="80" stroke="#DDD" stroke-width="1"/>
+  <line x1="30" y1="90" x2="170" y2="90" stroke="#DDD" stroke-width="1"/>
+  <line x1="30" y1="100" x2="170" y2="100" stroke="#DDD" stroke-width="1"/>
+  <line x1="30" y1="110" x2="170" y2="110" stroke="#DDD" stroke-width="1"/>
+  <line x1="30" y1="120" x2="170" y2="120" stroke="#DDD" stroke-width="1"/>
+  <line x1="30" y1="130" x2="170" y2="130" stroke="#DDD" stroke-width="1"/>
+  <line x1="30" y1="140" x2="170" y2="140" stroke="#DDD" stroke-width="1"/>
+  <line x1="30" y1="150" x2="170" y2="150" stroke="#DDD" stroke-width="1"/>
+
+  <!-- Terminal-like content on the page -->
+  <rect x="35" y="70" width="130" height="65" rx="5" ry="5" fill="#1A1A1A" stroke="#000" stroke-width="1"/>
+  <text x="45" y="90" font-family="monospace" font-size="14" fill="#00FF00">user@host:~ $</text>
+  <text x="45" y="110" font-family="monospace" font-size="14" fill="#00FF00">></text>
+
+  <!-- "History Book" text to the right of the book -->
+  <text x="200" y="120" font-family="Times New Roman, serif" font-size="60" font-weight="bold" fill="#4A6D3A" text-anchor="start">
+    History Book
+  </text>
+</svg>

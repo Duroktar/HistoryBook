@@ -5,15 +5,10 @@ import re
 import json
 import uuid
 import sys
-# --- MODIFICATION START ---
-# Changed from dialog to whiptail
+import argparse # NEW: Import argparse
 from whiptail import Whiptail
-# --- MODIFICATION END ---
 
 # --- Configuration ---
-# This script now outputs JSON to stdout, so OUTPUT_FILENAME is not used here
-# It's managed by history_book.py
-# OUTPUT_FILENAME = "project_commands.json" 
 COMMAND_LIMIT = 200
 # --- End Configuration ---
 
@@ -27,7 +22,6 @@ def get_history_file_path():
     }
     for shell, path in history_files.items():
         if os.path.exists(path):
-            # print(f"✅ Found {shell.capitalize()} history...") # Suppress for cleaner subprocess output
             return path, shell
     return None, None
 
@@ -52,33 +46,27 @@ def parse_history(file_path, shell_type):
         # print(f"❌ Error reading history file: {e}") # Suppress for cleaner subprocess output
         return []
 
-# --- MODIFICATION START ---
-# Removed load_existing_commands and save_commands, as history_book.py handles this
-# This script only outputs new commands
-# def load_existing_commands(filename): ...
-# def save_commands(filename, new_entries, existing_data): ...
-
 def main():
-    """Main function to run the TUI and output selected commands as JSON."""
+    # Add argument parsing for output file
+    parser = argparse.ArgumentParser(description="History Book Scraper CLI")
+    parser.add_argument('--output-file', type=str, required=True,
+                        help='Path to the file where selected commands will be written as JSON.')
+    args = parser.parse_args()
+
     w = Whiptail(title="History Book Scraper", backtitle="Select Commands")
 
     file_path, shell_type = get_history_file_path()
     if not file_path:
         w.msgbox("Could not find a supported history file (.zsh_history, .bash_history) in your home directory.")
-        sys.exit(1) # Exit with error code if no history file
+        sys.exit(1)
 
     commands = parse_history(file_path, shell_type)
     if not commands:
         w.msgbox("No commands found or unable to parse history file.")
-        sys.exit(1) # Exit with error code if no commands
+        sys.exit(1)
 
-    # We no longer filter against existing commands here; history_book.py will do that.
-    # This script just presents all recent commands from history.
-
-    # Create a dictionary to map a unique tag (index) back to the full command string
     command_map = {str(i): cmd for i, cmd in enumerate(commands)}
     
-    # Format for the checklist: (tag, item, status) for whiptail
     choices = [(str(i), cmd, 'OFF') for i, cmd in enumerate(commands)]
 
     selected_tags, exit_code = w.checklist(
@@ -86,42 +74,37 @@ def main():
         choices
     )
 
+    new_entries = []
     if exit_code == 0 and selected_tags: # 0 indicates OK/Yes in whiptail
-        new_entries = []
         for tag in selected_tags:
             command_text = command_map[tag]
             
-            # --- Prompt for short name, description, tags, and quiet flag ---
-            # Prompt for a short name
             name, code_name = w.inputbox(
                 f"Enter a short name for:\n\n'{command_text}'\n\n(Optional, for 'run <name>')",
                 default=""
             )
-            if code_name != 0: name = "" # Handle cancel
+            if code_name != 0: name = ""
 
-            # Prompt for description
             description, code_desc = w.inputbox(
                 f"Enter a description for:\n\n'{command_text}'",
                 default=""
             )
-            if code_desc != 0: description = "" # Handle cancel
+            if code_desc != 0: description = ""
 
-            # Prompt for tags
             tags_str, code_tags = w.inputbox(
                 f"Enter comma-separated tags for:\n\n'{command_text}'\n\n(e.g., build, test, docker)",
                 default=""
             )
             tags = [tag.strip() for tag in tags_str.split(',')] if code_tags == 0 and tags_str else []
 
-            # Prompt for quiet
-            quiet_status_initial = "OFF" # New commands default to not quiet
+            quiet_status_initial = "OFF"
             prompt_quiet_text = (
                 f"Set command '{command_text}' to run quietly by default?\n\n"
                 f"Current status: {quiet_status_initial}\n\n"
                 "Select 'Yes' to suppress this script's output (e.g., 'Running:' messages) when this command is executed via 'history_book run'.\n"
                 "Select 'No' to show all output."
             )
-            quiet_selected = w.yesno(prompt_quiet_text) # True for Yes, False for No/Cancel
+            quiet_selected = w.yesno(prompt_quiet_text)
 
             entry = {
                 "id": str(uuid.uuid4()),
@@ -130,20 +113,19 @@ def main():
                 "description": description,
                 "tags": tags,
                 "last_run": None,
-                "quiet": quiet_selected # Directly assign boolean from yesno
+                "quiet": quiet_selected
             }
             new_entries.append(entry)
-        
-        # Print the selected new entries as JSON to stdout
-        # history_book.py will capture this
-        print(json.dumps(new_entries, indent=2))
+    
+    # Write the JSON output to the specified file
+    try:
+        with open(args.output_file, 'w', encoding='utf-8') as f:
+            json.dump(new_entries, f, indent=2)
         sys.exit(0) # Indicate success
-    else:
-        # If no commands selected or cancelled, print empty JSON array
-        print("[]")
-        sys.exit(1) # Indicate cancellation/no selection
-# --- MODIFICATION END ---
+    except IOError as e:
+        # Print error to stderr, as stdout is for JSON
+        print(f"❌ Error writing output to file '{args.output_file}': {e}", file=sys.stderr)
+        sys.exit(1) # Indicate failure
 
 if __name__ == "__main__":
     main()
-

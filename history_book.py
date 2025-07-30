@@ -6,17 +6,15 @@ import os
 import subprocess
 import sys
 from datetime import datetime
+import tempfile # NEW: Import tempfile for temporary file handling
 
-# --- MODIFICATION START ---
-# Import Whiptail for TUI interactions in history_book.py itself
 from whiptail import Whiptail
-# --- MODIFICATION END ---
 
 # --- Configuration ---
 COMMANDS_FILE = "project_commands.json"
-# The script for adding new commands (the one we built previously)
-# This script will now output selected commands as JSON to stdout
 ADD_SCRIPT_PATH = os.path.join(os.path.dirname(__file__), 'scrape_history.py')
+VERSION_FILE = os.path.join(os.path.dirname(__file__), 'VERSION')
+CHANGELOG_FILE = os.path.join(os.path.dirname(__file__), 'CHANGELOG.md')
 
 # --- Helper Functions ---
 
@@ -101,8 +99,6 @@ def list_commands(args):
         name_part = f"  \033[1;33m{cmd.get('name', 'N/A')}\033[0m" # Yellow and Bold
         tags_part = f"\033[0;34m{cmd.get('tags', [])}\033[0m" # Blue
         
-        # --- MODIFICATION START ---
-        # Ensure 'command' is always present, even if empty string
         command_text = cmd.get('command', '') 
         description_text = cmd.get('description', '')
         quiet_status = " (Quiet)" if cmd.get('quiet', False) else ""
@@ -114,7 +110,6 @@ def list_commands(args):
         elif quiet_status: # If no description but quiet status exists
              print(f"     \033[2;37m{quiet_status.strip()}\033[0m")
         print("-" * 20)
-        # --- MODIFICATION END ---
 
 def run_command(args):
     """Handles the 'run' command."""
@@ -127,36 +122,42 @@ def run_command(args):
             break
             
     if command_to_run_entry:
-        # --- MODIFICATION START ---
-        # Determine effective quiet mode for this command
         effective_quiet = args.quiet or command_to_run_entry.get('quiet', False)
         
         if not effective_quiet:
             print(f"Running '{args.name}': \033[1;32m{command_to_run_entry['command']}\033[0m\n")
         try:
-            # Using subprocess.run is safer and more modern
             subprocess.run(command_to_run_entry['command'], shell=True, check=True)
             if not effective_quiet:
                 print(f"\n✅ Command '{args.name}' completed successfully.")
             update_last_run(command_to_run_entry['id']) # Update timestamp on successful run by ID
         except subprocess.CalledProcessError as e:
-            # Always print error messages, even in quiet mode
             print(f"\n❌ Error: Command '{args.name}' failed with exit code {e.returncode}.")
         except KeyboardInterrupt:
             print("\nOperation cancelled by user.")
-        # --- MODIFICATION END ---
     else:
         print(f"Error: No command with the name '{args.name}' found.")
 
 def add_commands(args):
     """Handles the 'add' command by calling the scraper script."""
     print("Launching the command selection interface...")
+    
+    # Use a temporary file to capture JSON output from scrape_history.py
+    # This allows scrape_history.py to use the terminal directly for whiptail
+    with tempfile.NamedTemporaryFile(mode='w+', delete=False, encoding='utf-8') as temp_output_file:
+        temp_file_path = temp_output_file.name
+    
     try:
-        # --- MODIFICATION START ---
-        # Capture stdout from scrape_history.py
-        result = subprocess.run([sys.executable, ADD_SCRIPT_PATH], capture_output=True, text=True, check=True)
-        # scrape_history.py will print the JSON of new commands to stdout
-        new_commands_json = result.stdout.strip()
+        # Run scrape_history.py, redirecting its stdout to the temporary file
+        # Do NOT capture_output here, so whiptail can display
+        subprocess.run(
+            [sys.executable, ADD_SCRIPT_PATH, '--output-file', temp_file_path],
+            check=True # Raise CalledProcessError if scrape_history.py exits non-zero
+        )
+        
+        # Read the JSON output from the temporary file
+        with open(temp_file_path, 'r', encoding='utf-8') as f:
+            new_commands_json = f.read().strip()
 
         if new_commands_json:
             new_entries = json.loads(new_commands_json)
@@ -169,21 +170,24 @@ def add_commands(args):
                 print("No new commands selected to add.")
         else:
             print("No commands returned from the selection interface.")
-        # --- MODIFICATION END ---
 
     except FileNotFoundError:
         print(f"Error: The scraper script '{ADD_SCRIPT_PATH}' was not found.")
     except json.JSONDecodeError:
-        print(f"Error: Failed to parse JSON output from scraper script. Output:\n{new_commands_json}")
+        print(f"Error: Failed to parse JSON output from scraper script. Output from temp file:\n{new_commands_json}")
     except subprocess.CalledProcessError as e:
         print(f"The 'add' process was cancelled or failed. Error: {e}")
-        if e.stderr:
-            print(f"Stderr: {e.stderr}")
+        # Print stdout/stderr from subprocess if available
         if e.stdout:
-            print(f"Stdout: {e.stdout}")
+            print(f"Scraper stdout: {e.stdout.decode('utf-8')}")
+        if e.stderr:
+            print(f"Scraper stderr: {e.stderr.decode('utf-8')}")
+    finally:
+        # Clean up the temporary file
+        if os.path.exists(temp_file_path):
+            os.remove(temp_file_path)
 
 
-# --- NEW: Edit Commands Function ---
 def edit_commands(args):
     """Handles the 'edit' command, allowing modification of saved commands."""
     w = Whiptail(title="History Book", backtitle="Edit Commands")
@@ -193,8 +197,6 @@ def edit_commands(args):
         w.msgbox(f"No commands found in {COMMANDS_FILE} to edit.")
         return
 
-    # Create a menu of commands: (tag, item) for whiptail
-    # We use the index as the tag, and the command name as the item.
     menu_choices = [(str(i), item.get('name', item['command'])) for i, item in enumerate(commands_data)]
 
     tag_str, exit_code = w.menu(
@@ -254,6 +256,33 @@ def edit_commands(args):
     else:
         print("\nCommand selection cancelled.")
 
+# --- NEW: Version and Changelog Commands ---
+def show_version(args):
+    """Reads and prints the project version."""
+    if not os.path.exists(VERSION_FILE):
+        print(f"Error: Version file '{VERSION_FILE}' not found.")
+        sys.exit(1)
+    try:
+        with open(VERSION_FILE, 'r') as f:
+            version = f.read().strip()
+        print(f"History Book Version: {version}")
+    except IOError as e:
+        print(f"Error reading version file: {e}")
+        sys.exit(1)
+
+def show_changelog(args):
+    """Reads and prints the project changelog."""
+    if not os.path.exists(CHANGELOG_FILE):
+        print(f"Error: Changelog file '{CHANGELOG_FILE}' not found.")
+        sys.exit(1)
+    try:
+        with open(CHANGELOG_FILE, 'r') as f:
+            changelog_content = f.read()
+        print(changelog_content)
+    except IOError as e:
+        print(f"Error reading changelog file: {e}")
+        sys.exit(1)
+# --- END NEW ---
 
 # --- Main Argument Parser ---
 
@@ -279,19 +308,23 @@ def main():
     # Sub-parser for the 'run' command
     parser_run = subparsers.add_parser('run', help='Run a saved command by its short name.')
     parser_run.add_argument('name', type=str, help='The short name of the command to execute.')
-    # --- MODIFICATION START ---
-    # Add --quiet flag to the run command
     parser_run.add_argument(
         '--quiet',
         action='store_true',
         help='Suppress History Book\'s own output (e.g., "Running:" messages) for this execution.'
     )
-    # --- MODIFICATION END ---
     parser_run.set_defaults(func=run_command)
 
-    # --- NEW: Sub-parser for the 'edit' command ---
+    # Sub-parser for the 'edit' command
     parser_edit = subparsers.add_parser('edit', help='Interactively edit properties of a saved command.')
     parser_edit.set_defaults(func=edit_commands)
+
+    # --- NEW: Sub-parsers for version and changelog ---
+    parser_version = subparsers.add_parser('version', help='Display the current project version.')
+    parser_version.set_defaults(func=show_version)
+
+    parser_changelog = subparsers.add_parser('changelog', help='Display the project changelog.')
+    parser_changelog.set_defaults(func=show_changelog)
     # --- END NEW ---
 
     args = parser.parse_args()
